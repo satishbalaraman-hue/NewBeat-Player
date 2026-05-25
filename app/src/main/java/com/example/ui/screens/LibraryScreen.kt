@@ -58,7 +58,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -103,12 +106,39 @@ fun LibraryScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
     ) {
+        // Soft ambient glows for the Glassmorphism visual context
+        val accentColor by viewModel.accentColor.collectAsState()
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(accentColor.copy(alpha = 0.12f), Color.Transparent),
+                    center = Offset(size.width * 0.15f, size.height * 0.25f),
+                    radius = size.width * 0.7f
+                ),
+                radius = size.width * 0.7f,
+                center = Offset(size.width * 0.15f, size.height * 0.25f)
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(accentColor.copy(alpha = 0.15f), Color.Transparent),
+                    center = Offset(size.width * 0.85f, size.height * 0.7f),
+                    radius = size.width * 0.7f
+                ),
+                radius = size.width * 0.7f,
+                center = Offset(size.width * 0.85f, size.height * 0.7f)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
         // App title & Subtitle
         Spacer(modifier = Modifier.height(16.dp))
         Row(
@@ -333,6 +363,7 @@ fun LibraryScreen(
                 }
             }
         }
+        }
     }
 }
 
@@ -344,7 +375,7 @@ fun LibraryTabItem(
     icon: ImageVector
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
         animationSpec = spring(stiffness = 500f)
     )
     val contentColor by animateColorAsState(
@@ -358,7 +389,11 @@ fun LibraryTabItem(
             .testTag("tab_chip_${text.lowercase()}"),
         shape = RoundedCornerShape(18.dp),
         color = backgroundColor,
-        contentColor = contentColor
+        contentColor = contentColor,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp),
@@ -411,15 +446,15 @@ fun TrackRowItem(
     onClick: () -> Unit
 ) {
     val backgroundColor = if (isActive) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     } else {
-        MaterialTheme.colorScheme.surface
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
     }
 
     val outlineColor = if (isActive) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
     } else {
-        Color.Transparent
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
     }
 
     Card(
@@ -428,8 +463,8 @@ fun TrackRowItem(
             .clickable(onClick = onClick)
             .testTag("track_row_${track.id}"),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = if (isActive) androidx.compose.foundation.BorderStroke(1.dp, outlineColor) else null,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.6.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, outlineColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -553,13 +588,14 @@ fun AlbumGridItem(
             .clickable(onClick = onClick)
             .testTag("album_grid_item_$albumTitle"),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
         ),
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(
-            0.5.dp,
+            1.dp,
             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
@@ -667,16 +703,25 @@ fun AlbumDetailScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
+        Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+            ),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             AlbumArt(
                 track = sampleTrack,
                 size = 100.dp
@@ -706,6 +751,7 @@ fun AlbumDetailScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
             }
+        }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -744,10 +790,14 @@ fun AlbumDetailTrackRow(
             .clickable(onClick = onClick)
             .testTag("album_detail_track_${track.id}"),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
         ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.4.dp)
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -851,10 +901,14 @@ fun ArtistListItem(
             .clickable(onClick = onClick)
             .testTag("artist_list_item_$artistName"),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
         ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.4.dp)
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -980,10 +1034,14 @@ fun ArtistAlbumsScreen(
                         .clickable { onAlbumSelect(albumTitle) }
                         .testTag("artist_album_item_$albumTitle"),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.4.dp)
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
