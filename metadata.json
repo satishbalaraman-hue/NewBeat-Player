@@ -1,0 +1,9 @@
+{
+  "name": "Music Player",
+  "description": "A modern, clean, and minimal high-fidelity music player with scanning, gapless playback, custom accent colors, equalizer, and dark mode.",
+  "requestFramePermissions": [
+    "android.permission.READ_MEDIA_AUDIO",
+    "android.permission.READ_EXTERNAL_STORAGE"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
