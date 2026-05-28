@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -71,7 +72,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Track
 import com.example.ui.components.AlbumArt
+import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.LibraryTab
+import com.example.util.neumorphic
 import com.example.viewmodel.MusicPlayerViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -83,9 +86,8 @@ fun LibraryScreen(
     viewModel: MusicPlayerViewModel,
     modifier: Modifier = Modifier
 ) {
-    val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
-    val filteredTracks by viewModel.filteredTracks.collectAsState()
+    val filteredTracks by viewModel.tracks.collectAsState()
     val currentTrack by viewModel.currentTrack.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
 
@@ -109,31 +111,7 @@ fun LibraryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Soft ambient glows for the Glassmorphism visual context
-        val accentColor by viewModel.accentColor.collectAsState()
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(accentColor.copy(alpha = 0.12f), Color.Transparent),
-                    center = Offset(size.width * 0.15f, size.height * 0.25f),
-                    radius = size.width * 0.7f
-                ),
-                radius = size.width * 0.7f,
-                center = Offset(size.width * 0.15f, size.height * 0.25f)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(accentColor.copy(alpha = 0.15f), Color.Transparent),
-                    center = Offset(size.width * 0.85f, size.height * 0.7f),
-                    radius = size.width * 0.7f
-                ),
-                radius = size.width * 0.7f,
-                center = Offset(size.width * 0.85f, size.height * 0.7f)
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -194,33 +172,6 @@ fun LibraryScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Search text field
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { viewModel.updateSearchQuery(it) },
-            placeholder = { Text("Search songs, artists, albums...", fontSize = 14.sp) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search active keyword",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("library_search_input"),
-            shape = RoundedCornerShape(24.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            )
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // Filter tabs (Songs, Albums, Artists, Genres)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -271,7 +222,7 @@ fun LibraryScreen(
         ) {
             if (filteredTracks.isEmpty()) {
                 EmptyLibraryState(
-                    hasQuery = searchQuery.isNotBlank(),
+                    hasQuery = false,
                     onRegenDemo = { viewModel.loadDemoLibrary() }
                 )
             } else {
@@ -374,26 +325,22 @@ fun LibraryTabItem(
     onClick: () -> Unit,
     icon: ImageVector
 ) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
-        animationSpec = spring(stiffness = 500f)
-    )
     val contentColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     )
 
-    Surface(
+    Box(
         modifier = Modifier
-            .clickable(onClick = onClick)
             .height(36.dp)
+            .neumorphic(
+                cornerRadius = 18.dp,
+                elevation = if (selected) 4.dp else 2.dp,
+                isPressed = !selected,
+                accentColor = if (selected) MaterialTheme.colorScheme.primary else null
+            )
+            .clickable(onClick = onClick)
             .testTag("tab_chip_${text.lowercase()}"),
-        shape = RoundedCornerShape(18.dp),
-        color = backgroundColor,
-        contentColor = contentColor,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        )
+        contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp),
@@ -403,13 +350,15 @@ fun LibraryTabItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(16.dp),
+                tint = contentColor
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = text,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = contentColor
             )
         }
     }
@@ -445,26 +394,17 @@ fun TrackRowItem(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isActive) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-    }
-
-    val outlineColor = if (isActive) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    }
-
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .neumorphic(
+                cornerRadius = 12.dp,
+                elevation = if (isActive) 2.dp else 4.dp,
+                isPressed = isActive,
+                accentColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else null
+            )
             .clickable(onClick = onClick)
-            .testTag("track_row_${track.id}"),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = androidx.compose.foundation.BorderStroke(1.dp, outlineColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .testTag("track_row_${track.id}")
     ) {
         Row(
             modifier = Modifier
@@ -582,20 +522,13 @@ fun AlbumGridItem(
     onClick: () -> Unit
 ) {
     val sampleTrack = albumTracks.firstOrNull()
-    Card(
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .neumorphic(cornerRadius = 16.dp, elevation = 4.dp)
             .clickable(onClick = onClick)
-            .testTag("album_grid_item_$albumTitle"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .testTag("album_grid_item_$albumTitle")
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
@@ -895,20 +828,12 @@ fun ArtistListItem(
     artistTracks: List<Track>,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .neumorphic(cornerRadius = 12.dp, elevation = 3.dp)
             .clickable(onClick = onClick)
-            .testTag("artist_list_item_$artistName"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .testTag("artist_list_item_$artistName")
     ) {
         Row(
             modifier = Modifier

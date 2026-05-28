@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,21 +48,24 @@ import androidx.compose.ui.unit.sp
 import com.example.viewmodel.ColorPresets
 import com.example.viewmodel.MusicPlayerViewModel
 import com.example.viewmodel.ThemeMode
+import com.example.util.neumorphic
 
 @Composable
 fun SettingsScreen(
     viewModel: MusicPlayerViewModel,
     modifier: Modifier = Modifier
 ) {
-    val activeTheme by viewModel.themeMode.collectAsState()
     val activeAccent by viewModel.accentColor.collectAsState()
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Title Header
@@ -77,13 +84,11 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Accent Color Palette Selector
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("accent_selector_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                .neumorphic(cornerRadius = 16.dp, elevation = 4.dp)
+                .testTag("accent_selector_card")
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +100,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Custom Accent Accent Color",
+                        text = "Custom Accent Color",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -129,7 +134,7 @@ fun SettingsScreen(
                                         color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent
                                     ),
                                     shape = CircleShape
-                                )
+                               )
                                 .clickable { viewModel.setAccentColor(color) }
                                 .testTag("color_preset_${ColorPresets.getName(color).lowercase().replace(" ", "_").trim()}"),
                             contentAlignment = Alignment.Center
@@ -148,159 +153,8 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Dark Theme Modes Selector
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("theme_selector_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.LightMode,
-                        contentDescription = null,
-                        tint = activeAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Theme Preference",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemePrefChip(
-                        label = "Light Mode",
-                        selected = activeTheme == ThemeMode.LIGHT,
-                        onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemePrefChip(
-                        label = "Dark OLED",
-                        selected = activeTheme == ThemeMode.DARK,
-                        onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemePrefChip(
-                        label = "System Auto",
-                        selected = activeTheme == ThemeMode.SYSTEM,
-                        onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Audiophile engine diagnostics
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("playback_engine_info_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-            shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = activeAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "ExoPlayer Engine status",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                EngineDetailRow("Provider Api", "Google Media3 SDK: v1.4.1")
-                EngineDetailRow("Render Mode", "Seamless Gapless Playback (Active)")
-                EngineDetailRow("Output Link", "Android Audio Session: Equalizer Applied")
-                EngineDetailRow("Storage Provider", "Android MediaStore Query Interface")
-                EngineDetailRow("Format Scope", "WAV, FLAC (Hi-Res), MP3, AAC, OGG, M4A")
-                EngineDetailRow("DSP Channels", "Multi-band Hardware Equalizer Node Layer")
-            }
-        }
+    }
     }
 }
 
-@Composable
-fun ThemePrefChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .height(38.dp)
-            .testTag("theme_chip_${label.lowercase().replace(" ", "")}"),
-        shape = RoundedCornerShape(19.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-        ),
-        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
 
-@Composable
-fun EngineDetailRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = value,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}

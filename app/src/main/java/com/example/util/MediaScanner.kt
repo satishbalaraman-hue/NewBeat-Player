@@ -12,6 +12,15 @@ object MediaScanner {
     private const val TAG = "MediaScanner"
 
     fun scanLocalMedia(context: Context): List<Track> {
+        val attributedContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                context.createAttributionContext("attribution")
+            } catch (t: Throwable) {
+                context
+            }
+        } else {
+            context
+        }
         val tracks = mutableListOf<Track>()
 
         // Check permission before querying
@@ -21,7 +30,7 @@ object MediaScanner {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
 
-        val hasPermission = context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val hasPermission = attributedContext.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (!hasPermission) {
             Log.w(TAG, "Read audio storage permission is not granted. Cannot scan MediaStore.")
             return emptyList()
@@ -39,12 +48,12 @@ object MediaScanner {
             MediaStore.Audio.Media.ALBUM_ID
         )
 
-        // Select only music files (is_music != 0)
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        // Select only music files (is_music != 0) or any audio mime type to catch m4a files
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 OR ${MediaStore.Audio.Media.MIME_TYPE} LIKE 'audio/%'"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
         try {
-            context.contentResolver.query(uri, projection, selection, null, sortOrder)?.use { cursor ->
+            attributedContext.contentResolver.query(uri, projection, selection, null, sortOrder)?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                 val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)

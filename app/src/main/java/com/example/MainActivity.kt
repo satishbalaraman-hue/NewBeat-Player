@@ -9,6 +9,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,8 +19,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,16 +36,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.screens.EqualizerScreen
+import com.example.ui.screens.SearchScreen
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.NowPlayingMiniAndFullPlayer
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.MusicPlayerViewModel
+import com.example.util.neumorphic
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,9 +81,17 @@ fun MainLayout(
 
     val currentTrack by viewModel.currentTrack.collectAsState()
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        bottomBar = {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Pure, elegant solid layout background for pristine Neumorphic contrast
+
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            bottomBar = {
             if (!playerExpanded) {
                 Column {
                     // Minimised persistent bottom player bar pops up only when a song is loaded
@@ -90,9 +104,11 @@ fun MainLayout(
                     }
 
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp,
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
                         modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .neumorphic(cornerRadius = 24.dp, elevation = 5.dp)
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .testTag("app_navigation_bar")
                     ) {
@@ -118,16 +134,16 @@ fun MainLayout(
                             onClick = { currentScreenTab = 1 },
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Default.Equalizer,
-                                    contentDescription = "Equalizer adjustments",
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Query music database",
                                     tint = if (currentScreenTab == 1) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
-                            label = { Text("Equalizer", style = MaterialTheme.typography.labelSmall) },
+                            label = { Text("Search", style = MaterialTheme.typography.labelSmall) },
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer
                             ),
-                            modifier = Modifier.testTag("nav_item_equalizer")
+                            modifier = Modifier.testTag("nav_item_search")
                         )
 
                         NavigationBarItem(
@@ -166,7 +182,7 @@ fun MainLayout(
             ) { targetTab ->
                 when (targetTab) {
                     0 -> LibraryScreen(viewModel = viewModel)
-                    1 -> EqualizerScreen(viewModel = viewModel)
+                    1 -> SearchScreen(viewModel = viewModel)
                     2 -> SettingsScreen(viewModel = viewModel)
                 }
             }
@@ -180,6 +196,7 @@ fun MainLayout(
                 )
             }
         }
+    }
     }
 }
 

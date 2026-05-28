@@ -64,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,6 +75,7 @@ import com.example.model.Track
 import com.example.ui.components.AlbumArt
 import com.example.viewmodel.MusicPlayerViewModel
 import com.example.viewmodel.PlaybackRepeatMode
+import com.example.util.neumorphic
 
 @Composable
 fun NowPlayingMiniAndFullPlayer(
@@ -90,6 +92,8 @@ fun NowPlayingMiniAndFullPlayer(
 
     val track = currentTrack ?: return
 
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     Box(modifier = modifier.fillMaxWidth()) {
         // 1. Collapsed Mini Launcher Bar (Persistent Bottom Anchor)
         AnimatedVisibility(
@@ -97,18 +101,13 @@ fun NowPlayingMiniAndFullPlayer(
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it }
         ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(68.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .neumorphic(cornerRadius = 16.dp, elevation = 4.dp)
                     .clickable { onExpandChanged(true) }
-                    .testTag("now_playing_mini_bar"),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                )
+                    .testTag("now_playing_mini_bar")
             ) {
                 Row(
                     modifier = Modifier
@@ -219,13 +218,12 @@ fun FullPlayerConsole(
     val repeatMode by viewModel.repeatMode.collectAsState()
     val shuffleMode by viewModel.shuffleMode.collectAsState()
 
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(
-            accentColor.copy(alpha = 0.15f),
-            MaterialTheme.colorScheme.background,
-            MaterialTheme.colorScheme.background
-        )
-    )
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glassBgColor = if (isDark) {
+        Color(0xFF0F0F1A).copy(alpha = 0.55f)
+    } else {
+        Color(0xFFFAFAFF).copy(alpha = 0.55f)
+    }
 
     // Pulse animation based of active audio playing state
     val scalePulse by animateFloatAsState(
@@ -233,15 +231,18 @@ fun FullPlayerConsole(
         animationSpec = spring(stiffness = 8f)
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .background(backgroundBrush)
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         // Top Toolbar
         Row(
             modifier = Modifier
@@ -276,16 +277,20 @@ fun FullPlayerConsole(
         Spacer(modifier = Modifier.weight(0.6f))
 
         // Big detailed generated artwork
-        Card(
+        Box(
             modifier = Modifier
                 .size(270.dp)
                 .scale(scalePulse)
-                .clip(RoundedCornerShape(24.dp))
-                .testTag("full_player_artwork_container"),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                .neumorphic(cornerRadius = 24.dp, elevation = 6.dp)
+                .testTag("full_player_artwork_container")
         ) {
-            AlbumArt(track = track, size = 270.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                AlbumArt(track = track, size = 270.dp)
+            }
         }
 
         Spacer(modifier = Modifier.weight(1.4f))
@@ -380,28 +385,41 @@ fun FullPlayerConsole(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Shuffle
-            IconButton(
-                onClick = { viewModel.toggleShuffleMode() },
-                modifier = Modifier.testTag("full_player_shuffle")
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .neumorphic(
+                        cornerRadius = 22.dp,
+                        elevation = if (shuffleMode) 1.dp else 4.dp,
+                        isPressed = shuffleMode,
+                        accentColor = if (shuffleMode) accentColor.copy(alpha = 0.15f) else null
+                    )
+                    .clickable { viewModel.toggleShuffleMode() }
+                    .testTag("full_player_shuffle"),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,
                     contentDescription = "toggle shuffle mode",
                     tint = if (shuffleMode) accentColor else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
             // Skip Prev
-            IconButton(
-                onClick = { viewModel.skipToPrevious() },
-                modifier = Modifier.testTag("full_player_prev")
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .neumorphic(cornerRadius = 24.dp, elevation = 4.dp)
+                    .clickable { viewModel.skipToPrevious() }
+                    .testTag("full_player_prev"),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
                     contentDescription = "Previous Track",
                     tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -409,8 +427,12 @@ fun FullPlayerConsole(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .clip(CircleShape)
-                    .background(accentColor)
+                    .neumorphic(
+                        cornerRadius = 36.dp,
+                        elevation = if (isPlaying) 1.dp else 4.dp,
+                        isPressed = isPlaying,
+                        accentColor = accentColor
+                    )
                     .clickable { viewModel.togglePlayPause() }
                     .testTag("full_player_play_pause"),
                 contentAlignment = Alignment.Center
@@ -424,29 +446,42 @@ fun FullPlayerConsole(
             }
 
             // Skip Next
-            IconButton(
-                onClick = { viewModel.skipToNext() },
-                modifier = Modifier.testTag("full_player_next")
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .neumorphic(cornerRadius = 24.dp, elevation = 4.dp)
+                    .clickable { viewModel.skipToNext() }
+                    .testTag("full_player_next"),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next Track",
                     tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
             // Repeat Mode
-            IconButton(
-                onClick = { viewModel.toggleRepeatMode() },
-                modifier = Modifier.testTag("full_player_repeat")
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .neumorphic(
+                        cornerRadius = 22.dp,
+                        elevation = if (repeatMode != PlaybackRepeatMode.OFF) 1.dp else 4.dp,
+                        isPressed = repeatMode != PlaybackRepeatMode.OFF,
+                        accentColor = if (repeatMode != PlaybackRepeatMode.OFF) accentColor.copy(alpha = 0.15f) else null
+                    )
+                    .clickable { viewModel.toggleRepeatMode() }
+                    .testTag("full_player_repeat"),
+                contentAlignment = Alignment.Center
             ) {
                 val repIcon = if (repeatMode == PlaybackRepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
                 Icon(
                     imageVector = repIcon,
                     contentDescription = "cycle repeat mode",
                     tint = if (repeatMode != PlaybackRepeatMode.OFF) accentColor else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -454,18 +489,11 @@ fun FullPlayerConsole(
         Spacer(modifier = Modifier.weight(1.2f))
 
         // Custom Audiophile specifications quality readout panel
-        Card(
+        Box(
             modifier = Modifier
                 .padding(horizontal = 24.dp, vertical = 24.dp)
-                .testTag("full_player_tech_specs_card"),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            ),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-            )
+                .neumorphic(cornerRadius = 16.dp, elevation = 4.dp)
+                .testTag("full_player_tech_specs_card")
         ) {
             Row(
                 modifier = Modifier
@@ -490,6 +518,7 @@ fun FullPlayerConsole(
             }
         }
     }
+}
 }
 
 @Composable

@@ -3,7 +3,7 @@ package com.example.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.audiofx.Equalizer
+
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.compose.ui.graphics.Color
@@ -13,6 +13,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.model.Track
+import com.example.model.TrackEntity
+import com.example.db.AppDatabase
 import com.example.util.AudioSynthesizer
 import com.example.util.MediaScanner
 import kotlinx.coroutines.Dispatchers
@@ -83,32 +85,33 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     private val _currentPlaylist = MutableStateFlow<List<Track>>(emptyList())
     val currentPlaylist: StateFlow<List<Track>> = _currentPlaylist.asStateFlow()
 
-    // Hardware Equalizer linking
-    private var physicalEqualizer: Equalizer? = null
-    private val _equalizerEnabled = MutableStateFlow(false)
-    val equalizerEnabled: StateFlow<Boolean> = _equalizerEnabled.asStateFlow()
 
-    // 5 standard Equalizer Band gains (60Hz, 230Hz, 910Hz, 4kHz, 14kHz) in dB. Range: -15dB to +15dB
-    private val _equalizerBands = MutableStateFlow(floatArrayOf(0f, 0f, 0f, 0f, 0f))
-    val equalizerBands: StateFlow<FloatArray> = _equalizerBands.asStateFlow()
-
-    private val _equalizerPreset = MutableStateFlow("Normal")
-    val equalizerPreset: StateFlow<String> = _equalizerPreset.asStateFlow()
 
     // Themes & Custom Accent colors
     private val _accentColor = MutableStateFlow(ColorPresets.RoyalAmethyst)
     val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(ThemeMode.DARK) // default beautiful dark mode
+    private val _themeMode = MutableStateFlow(ThemeMode.LIGHT) // default beautiful light mode
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     // Polling job for track seek position
     private var positionPoller: Job? = null
 
     init {
-        // Automatically inject demo synthesizer tracks on startup so player is fully alive
-        loadDemoLibrary()
+        // Automatically load demo tracks and persisted local tracks from database
+        loadLibrary()
         initializePlayer()
+
+        // Auto-refresh library if storage read permission is already granted
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val hasPermission = getApplication<Application>().checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            scanMedia()
+        }
 
         // Dynamic Accent Color Auto-Extraction on track changes
         viewModelScope.launch {
@@ -128,7 +131,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
         try {
             val context = getApplication<Application>()
-            player = ExoPlayer.Builder(context).build().apply {
+            val attributedContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                try {
+                    context.createAttributionContext("attribution")
+                } catch (t: Throwable) {
+                    context
+                }
+            } else {
+                context
+            }
+            player = ExoPlayer.Builder(attributedContext).build().apply {
                 // Media3 handles gapless audio transition perfectly by default in its playlist engine!
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
@@ -162,13 +174,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         }
                     }
 
-                    override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                        super.onAudioSessionIdChanged(audioSessionId)
-                        // Tie physical system equalizer if enabled safely on the Main thread
-                        viewModelScope.launch {
-                            setupEqualizer(audioSessionId)
-                        }
-                    }
+
                 })
             }
             Log.d(TAG, "ExoPlayer Engine initialized successfully.")
@@ -197,11 +203,40 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // Media Actions
+    private fun loadLibrary() {
+        viewModelScope.launch {
+            val combined = withContext(Dispatchers.IO) {
+                val demoTracks = AudioSynthesizer.generateDemoTracks(getApplication())
+                val db = AppDatabase.getDatabase(getApplication())
+                val savedEntities = try {
+                    db.trackDao().getAllTracks()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load saved tracks", e)
+                    emptyList()
+                }
+                val savedTracks = savedEntities.map { it.toTrack() }
+                demoTracks + savedTracks
+            }
+            _tracks.value = combined
+            Log.d(TAG, "Library loaded on startup. Total tracks: ${combined.size}")
+        }
+    }
+
     fun scanMedia() {
         viewModelScope.launch {
             val combinedTracks = withContext(Dispatchers.IO) {
                 val localTracks = MediaScanner.scanLocalMedia(getApplication())
                 val demoTracks = AudioSynthesizer.generateDemoTracks(getApplication())
+                
+                // Save newly scanned local tracks to Room
+                val db = AppDatabase.getDatabase(getApplication())
+                try {
+                    db.trackDao().clearAll()
+                    db.trackDao().insertAll(localTracks.map { TrackEntity.fromTrack(it) })
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to save scanned tracks to database", e)
+                }
+                
                 localTracks + demoTracks
             }
             // Merge actual storage files with high-res synthesizer demo loop tracks
@@ -219,6 +254,44 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    private fun getMimeTypeForTrack(context: android.content.Context, track: Track): String? {
+        val uriStr = track.uri.toString()
+        if (uriStr.startsWith("content://")) {
+            try {
+                val type = context.contentResolver.getType(track.uri)
+                if (type != null) {
+                    if (type.equals("audio/m4a", ignoreCase = true) || type.equals("audio/x-m4a", ignoreCase = true)) {
+                        return "audio/mp4"
+                    }
+                    return type
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        return when (track.format.uppercase()) {
+            "MP3" -> "audio/mpeg"
+            "M4A", "MP4" -> "audio/mp4"
+            "WAV", "WAVE" -> "audio/wav"
+            "FLAC" -> "audio/flac"
+            "OGG", "OGA" -> "audio/ogg"
+            "AAC" -> "audio/aac"
+            else -> {
+                // Guess from path extension
+                val ext = track.path.substringAfterLast('.', "").uppercase()
+                when (ext) {
+                    "MP3" -> "audio/mpeg"
+                    "M4A", "MP4" -> "audio/mp4"
+                    "WAV", "WAVE" -> "audio/wav"
+                    "FLAC" -> "audio/flac"
+                    "OGG", "OGA" -> "audio/ogg"
+                    "AAC" -> "audio/aac"
+                    else -> null
+                }
+            }
+        }
+    }
+
     fun selectTrack(track: Track, fromList: List<Track>) {
         initializePlayer()
         val p = player ?: return
@@ -226,13 +299,17 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _currentPlaylist.value = fromList
         _currentTrack.value = track
 
+        val context = getApplication<Application>()
         // Clear existing playlist and inject selected playlist for seamless gapless playback
         p.clearMediaItems()
         val mediaItems = fromList.map { t ->
-            MediaItem.Builder()
+            val builder = MediaItem.Builder()
                 .setUri(t.uri)
                 .setMediaId(t.id.toString())
-                .build()
+            getMimeTypeForTrack(context, t)?.let { mimeType ->
+                builder.setMimeType(mimeType)
+            }
+            builder.build()
         }
         p.addMediaItems(mediaItems)
 
@@ -254,13 +331,22 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
         var bitmap: Bitmap? = null
         val context = getApplication<Application>()
+        val attributedContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                context.createAttributionContext("attribution")
+            } catch (t: Throwable) {
+                context
+            }
+        } else {
+            context
+        }
 
         try {
             // Strategy 1: Load from albumArtUri if present
             val artUri = track.albumArtUri
             if (artUri != null && artUri != android.net.Uri.EMPTY) {
                 try {
-                    context.contentResolver.openInputStream(artUri)?.use { stream ->
+                    attributedContext.contentResolver.openInputStream(artUri)?.use { stream ->
                         val options = BitmapFactory.Options().apply {
                             inSampleSize = 4 // Safe downsampling
                         }
@@ -274,7 +360,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             // Strategy 2: Use loadThumbnail on Q+ (if Strategy 1 failed or wasn't available)
             if (bitmap == null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 try {
-                    bitmap = context.contentResolver.loadThumbnail(track.uri, android.util.Size(120, 120), null)
+                    bitmap = attributedContext.contentResolver.loadThumbnail(track.uri, android.util.Size(120, 120), null)
                 } catch (t: Throwable) {
                     // Ignore
                 }
@@ -425,104 +511,6 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // Equalizer Functions
-    private fun setupEqualizer(audioSessionId: Int) {
-        if (audioSessionId == 0) return
-        try {
-            // Close old physical equalizer session
-            try {
-                physicalEqualizer?.release()
-            } catch (t: Throwable) {
-                Log.e(TAG, "Error releasing old hardware equalizer", t)
-            }
-
-            physicalEqualizer = Equalizer(0, audioSessionId).apply {
-                enabled = _equalizerEnabled.value
-                // Synchronize preset levels
-                applyPresetToHardware()
-            }
-            Log.d(TAG, "Hardware Equalizer successfully bound to Audio Session ID: $audioSessionId")
-        } catch (e: Throwable) {
-            Log.e(TAG, "Could not initialize hardware Equalizer. Falling back to fine-tuned DSP simulation.", e)
-            physicalEqualizer = null
-        }
-    }
-
-    fun toggleEqualizer(enabled: Boolean) {
-        _equalizerEnabled.value = enabled
-        try {
-            physicalEqualizer?.enabled = enabled
-        } catch (e: Throwable) {
-            Log.e(TAG, "Error changing hardware equalizer enabled state", e)
-        }
-    }
-
-    fun updateEqualizerBand(index: Int, dbValue: Float) {
-        val currentGains = _equalizerBands.value.copyOf()
-        if (index in currentGains.indices) {
-            currentGains[index] = dbValue.coerceIn(-15f, 15f)
-            _equalizerBands.value = currentGains
-            _equalizerPreset.value = "Custom"
-
-            applyBandToHardware(index, dbValue)
-        }
-    }
-
-    private fun applyBandToHardware(bandIndex: Int, dbValue: Float) {
-        physicalEqualizer?.let { eq ->
-            try {
-                if (bandIndex < eq.numberOfBands) {
-                    val millibels = (dbValue * 100).toInt().coerceIn(
-                        eq.bandLevelRange[0].toInt(),
-                        eq.bandLevelRange[1].toInt()
-                    )
-                    eq.setBandLevel(bandIndex.toShort(), millibels.toShort())
-                }
-            } catch (e: Throwable) {
-                Log.e(TAG, "Error setting hardware band level", e)
-            }
-        }
-    }
-
-    private fun applyPresetToHardware() {
-        val eq = physicalEqualizer ?: return
-        try {
-            val bands = _equalizerBands.value
-            for (i in bands.indices) {
-                if (i < eq.numberOfBands) {
-                    val millibels = (bands[i] * 100).toInt().coerceIn(
-                        eq.bandLevelRange[0].toInt(),
-                        eq.bandLevelRange[1].toInt()
-                    )
-                    eq.setBandLevel(i.toShort(), millibels.toShort())
-                }
-            }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Error aligning multi-band preset values to hardware equalizer", e)
-        }
-    }
-
-    fun applyPreset(presetName: String) {
-        _equalizerPreset.value = presetName
-        
-        val presetBands = when (presetName) {
-            "Pop" -> floatArrayOf(2f, 4f, 6f, 2f, -1f)
-            "Rock" -> floatArrayOf(5f, 3f, -1f, 3f, 6f)
-            "Classical" -> floatArrayOf(4f, 3f, 0f, 4f, 4f)
-            "Jazz" -> floatArrayOf(3f, 2f, -3f, 2f, 5f)
-            "Bass Booster" -> floatArrayOf(12f, 8f, 0f, 0f, -2f)
-            "Vocal Booster" -> floatArrayOf(-3f, 0f, 6f, 8f, 3f)
-            "Flat" -> floatArrayOf(0f, 0f, 0f, 0f, 0f)
-            else -> floatArrayOf(0f, 0f, 0f, 0f, 0f) // Normal / Flat
-        }
-
-        _equalizerBands.value = presetBands
-
-        if (_equalizerEnabled.value) {
-            applyPresetToHardware()
-        }
-    }
-
     // Cosmetics
     fun setAccentColor(color: Color) {
         _accentColor.value = color
@@ -549,13 +537,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             Log.e(TAG, "Error releasing ExoPlayer in onCleared", t)
         }
         player = null
-        try {
-            physicalEqualizer?.release()
-        } catch (t: Throwable) {
-            Log.e(TAG, "Error releasing physical equalizer in onCleared", t)
-        }
-        physicalEqualizer = null
-        Log.d(TAG, "Released ExoPlayer and Equalizer components inside cleared ViewModel.")
+        Log.d(TAG, "Released ExoPlayer engine inside cleared ViewModel.")
     }
 }
 

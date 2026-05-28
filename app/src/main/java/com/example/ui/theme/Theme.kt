@@ -11,7 +11,7 @@ import com.example.viewmodel.ThemeMode
 
 @Composable
 fun MyApplicationTheme(
-    themeMode: ThemeMode = ThemeMode.DARK,
+    themeMode: ThemeMode = ThemeMode.LIGHT,
     accentColor: Color = ColorPresets.RoyalAmethyst,
     content: @Composable () -> Unit,
 ) {
@@ -27,15 +27,15 @@ fun MyApplicationTheme(
             onPrimary = Color.White,
             primaryContainer = accentColor.copy(alpha = 0.2f),
             onPrimaryContainer = accentColor,
-            background = Color(0xFF09090C),      // High-contrast pitch OLED black
-            surface = Color(0xFF121217),         // Layered premium dark card surface
+            background = Color(0xFF1B1C24),      // Softer dark background for Neumorphism shadows
+            surface = Color(0xFF1B1C24),         // Matching surface for extruded neumorphic shapes
             onBackground = Color(0xFFECECF1),
             onSurface = Color(0xFFECECF1),
             secondary = accentColor.copy(alpha = 0.8f),
             onSecondary = Color.White,
-            surfaceVariant = Color(0xFF1D1D24),
+            surfaceVariant = Color(0xFF252631),
             onSurfaceVariant = Color(0xFFC5C5CE),
-            outline = Color(0xFF2E2E38)
+            outline = Color(0xFF323445)
         )
     } else {
         lightColorScheme(
@@ -43,15 +43,15 @@ fun MyApplicationTheme(
             onPrimary = Color.White,
             primaryContainer = accentColor.copy(alpha = 0.12f),
             onPrimaryContainer = accentColor,
-            background = Color(0xFFF9F9FB),      // Elegant cream off-white
-            surface = Color(0xFFFFFFFF),         // Clean paper white cards
+            background = Color(0xFFE6EBF2),      // Calibrated soft neumorphic light gray background
+            surface = Color(0xFFE6EBF2),         // Matching surface for extruded shapes
             onBackground = Color(0xFF101014),
             onSurface = Color(0xFF101014),
             secondary = accentColor.copy(alpha = 0.8f),
             onSecondary = Color.White,
-            surfaceVariant = Color(0xFFF2F2F6),
+            surfaceVariant = Color(0xFFD6DBE4),
             onSurfaceVariant = Color(0xFF60606A),
-            outline = Color(0xFFDFDFE5)
+            outline = Color(0xFFBCC2CD)
         )
     }
 
