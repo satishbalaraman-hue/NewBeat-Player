@@ -30,13 +30,13 @@ fun Modifier.neumorphic(
     
     // Choose highly calibrated neumorphic shadow colors for perfect contrast
     val darkShadow = if (isDark) {
-        Color(0xFF090A0E).copy(alpha = 0.8f)
+        Color(0xFF030305).copy(alpha = 0.95f)
     } else {
-        Color(0xFFA3B1C6).copy(alpha = 0.6f)
+        Color(0xFFA3B1C6).copy(alpha = 1.0f) // Specified in design.md at 100% opacity
     }
     
     val lightShadow = if (isDark) {
-        Color(0xFF2E3240).copy(alpha = 0.5f)
+        Color(0xFF383C4D).copy(alpha = 0.85f)
     } else {
         Color(0xFFFFFFFF).copy(alpha = 1.0f)
     }
@@ -54,37 +54,37 @@ fun Modifier.neumorphic(
                 cornerRadius = CornerRadius(radiusPx, radiusPx)
             )
             
-            // Inner shadow representation
+            // Inner shadow representation with higher density
             drawRoundRect(
-                color = darkShadow.copy(alpha = 0.25f),
-                topLeft = Offset(2f, 2f),
+                color = darkShadow.copy(alpha = 0.5f),
+                topLeft = Offset(3f, 3f),
                 cornerRadius = CornerRadius(radiusPx, radiusPx),
-                style = Stroke(width = 5f)
+                style = Stroke(width = 8f)
             )
             drawRoundRect(
-                color = lightShadow.copy(alpha = 0.35f),
-                topLeft = Offset(-1f, -1f),
+                color = lightShadow.copy(alpha = 0.6f),
+                topLeft = Offset(-1.5f, -1.5f),
                 cornerRadius = CornerRadius(radiusPx, radiusPx),
-                style = Stroke(width = 4f)
+                style = Stroke(width = 6f)
             )
         } else {
             // Drawn as elevated (raised) Neumorphic surface
-            val steps = 5
+            val steps = 6
             for (i in 1..steps) {
                 val alphaMultiplier = (steps - i + 1).toFloat() / steps
                 val currentOffset = (elevPx * i) / steps
                 
-                // Dark shadow down and to the right
+                // Dark shadow down and to the right - increased alpha
                 drawRoundRect(
-                    color = darkShadow.copy(alpha = darkShadow.alpha * 0.18f * alphaMultiplier),
+                    color = darkShadow.copy(alpha = darkShadow.alpha * 0.32f * alphaMultiplier),
                     topLeft = Offset(currentOffset, currentOffset),
                     size = this.size,
                     cornerRadius = CornerRadius(radiusPx + currentOffset / 2, radiusPx + currentOffset / 2)
                 )
                 
-                // Light shadow up and to the left
+                // Light shadow up and to the left - increased alpha
                 drawRoundRect(
-                    color = lightShadow.copy(alpha = lightShadow.alpha * 0.25f * alphaMultiplier),
+                    color = lightShadow.copy(alpha = lightShadow.alpha * 0.45f * alphaMultiplier),
                     topLeft = Offset(-currentOffset, -currentOffset),
                     size = this.size,
                     cornerRadius = CornerRadius(radiusPx + currentOffset / 2, radiusPx + currentOffset / 2)
@@ -95,6 +95,13 @@ fun Modifier.neumorphic(
             drawRoundRect(
                 color = accentColor ?: baseColor,
                 cornerRadius = CornerRadius(radiusPx, radiusPx)
+            )
+
+            // Add a beautiful subtle dual highlight stroke (bevel outline)
+            drawRoundRect(
+                color = lightShadow.copy(alpha = if (isDark) 0.15f else 0.4f),
+                cornerRadius = CornerRadius(radiusPx, radiusPx),
+                style = Stroke(width = 1.5f)
             )
         }
     }

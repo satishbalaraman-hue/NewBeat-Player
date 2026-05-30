@@ -276,20 +276,22 @@ fun FullPlayerConsole(
 
         Spacer(modifier = Modifier.weight(0.6f))
 
-        // Big detailed generated artwork
+        // Big detailed generated artwork with prominent dual-stage neumorphic wells
         Box(
             modifier = Modifier
-                .size(270.dp)
+                .size(280.dp)
                 .scale(scalePulse)
-                .neumorphic(cornerRadius = 24.dp, elevation = 6.dp)
-                .testTag("full_player_artwork_container")
+                .neumorphic(cornerRadius = 32.dp, elevation = 5.dp, isPressed = true) // Chunky sunken outer frame/well
+                .testTag("full_player_artwork_container"),
+            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .size(236.dp)
+                    .neumorphic(cornerRadius = 24.dp, elevation = 8.dp) // Beautiful elevated album artwork card
                     .clip(RoundedCornerShape(24.dp))
             ) {
-                AlbumArt(track = track, size = 270.dp)
+                AlbumArt(track = track, size = 236.dp)
             }
         }
 

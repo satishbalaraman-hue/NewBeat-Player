@@ -43,8 +43,8 @@ fun MyApplicationTheme(
             onPrimary = Color.White,
             primaryContainer = accentColor.copy(alpha = 0.12f),
             onPrimaryContainer = accentColor,
-            background = Color(0xFFE6EBF2),      // Calibrated soft neumorphic light gray background
-            surface = Color(0xFFE6EBF2),         // Matching surface for extruded shapes
+            background = Color(0xFFE0E5EC),      // Foundation of the entire UI as specified in design.md
+            surface = Color(0xFFE0E5EC),         // Matched to background for the molded neumorphic look
             onBackground = Color(0xFF101014),
             onSurface = Color(0xFF101014),
             secondary = accentColor.copy(alpha = 0.8f),

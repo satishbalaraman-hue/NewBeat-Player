@@ -112,10 +112,14 @@ fun LibraryScreen(
         modifier = modifier
             .fillMaxSize()
     ) {
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onBackground else Color(0xFF44474A)
+        val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 24.dp)
         ) {
         // App title & Subtitle
         Spacer(modifier = Modifier.height(16.dp))
@@ -129,44 +133,40 @@ fun LibraryScreen(
                     text = "Library",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "High-Res Seamless Audio Player",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    color = primaryTextColor
                 )
             }
 
             // Sync Media Files from Storage
-            Button(
-                onClick = {
-                    if (permissionState.status.isGranted) {
-                        viewModel.scanMedia()
-                    } else {
-                        permissionState.launchPermissionRequest()
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            Box(
                 modifier = Modifier
-                    .height(38.dp)
-                    .testTag("scan_storage_button")
+                    .neumorphic(cornerRadius = 20.dp, elevation = 3.dp)
+                    .clickable {
+                        if (permissionState.status.isGranted) {
+                            viewModel.scanMedia()
+                        } else {
+                            permissionState.launchPermissionRequest()
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .testTag("scan_storage_button"),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Scan Media",
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Scan",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Scan Media",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Scan",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
@@ -175,7 +175,7 @@ fun LibraryScreen(
         // Filter tabs (Songs, Albums, Artists, Genres)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             LibraryTabItem(
                 text = "Tracks",
@@ -333,7 +333,7 @@ fun LibraryTabItem(
         modifier = Modifier
             .height(36.dp)
             .neumorphic(
-                cornerRadius = 18.dp,
+                cornerRadius = 20.dp,
                 elevation = if (selected) 4.dp else 2.dp,
                 isPressed = !selected,
                 accentColor = if (selected) MaterialTheme.colorScheme.primary else null
@@ -373,7 +373,7 @@ fun TrackListView(
 ) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 120.dp, top = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(tracks, key = { it.id }) { track ->
             val isActive = currentTrack?.id == track.id
@@ -394,6 +394,10 @@ fun TrackRowItem(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF44474A)
+    val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -409,30 +413,39 @@ fun TrackRowItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Album Art
-            AlbumArt(track = track, size = 52.dp)
+            // Album Art with sunken picture frame effect
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .neumorphic(cornerRadius = 12.dp, elevation = 2.dp, isPressed = true)
+                    .padding(2.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                AlbumArt(track = track, size = 52.dp, modifier = Modifier.fillMaxSize())
+            }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = track.title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold, // Bold weight for primary title
+                    color = if (isActive) MaterialTheme.colorScheme.primary else primaryTextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = track.artist,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        fontSize = 12.sp, // Inter scale body-xs
+                        fontWeight = FontWeight.Normal,
+                        color = secondaryTextColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -440,12 +453,13 @@ fun TrackRowItem(
                     Text(
                         text = " • ",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        color = secondaryTextColor.copy(alpha = 0.7f)
                     )
                     Text(
                         text = track.album,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Normal,
+                        color = secondaryTextColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -481,7 +495,7 @@ fun TrackRowItem(
                 Text(
                     text = formatMs(track.durationMs),
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    color = secondaryTextColor
                 )
             }
         }
@@ -500,8 +514,8 @@ fun AlbumGridScreen(
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 140.dp),
         contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         items(albums.keys.toList(), key = { it }) { albumTitle ->
@@ -522,22 +536,28 @@ fun AlbumGridItem(
     onClick: () -> Unit
 ) {
     val sampleTrack = albumTracks.firstOrNull()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF44474A)
+    val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphic(cornerRadius = 16.dp, elevation = 4.dp)
+            .neumorphic(cornerRadius = 20.dp, elevation = 4.dp) // Standard standard radius
             .clickable(onClick = onClick)
             .testTag("album_grid_item_$albumTitle")
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
+            // Recessed picture frame album art container (24.dp corner radius per specs)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .neumorphic(cornerRadius = 24.dp, elevation = 3.dp, isPressed = true)
+                    .padding(3.dp)
+                    .clip(RoundedCornerShape(24.dp))
             ) {
                 AlbumArt(
                     track = sampleTrack,
@@ -550,7 +570,7 @@ fun AlbumGridItem(
                 text = albumTitle,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = primaryTextColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -558,7 +578,8 @@ fun AlbumGridItem(
             Text(
                 text = sampleTrack?.artist ?: "Unknown Artist",
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium,
+                color = secondaryTextColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -588,7 +609,7 @@ fun AlbumGridItem(
                 Text(
                     text = "${albumTracks.size} ${if (albumTracks.size == 1) "Track" else "Tracks"}",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = secondaryTextColor.copy(alpha = 0.8f)
                 )
             }
         }
@@ -636,18 +657,14 @@ fun AlbumDetailScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Card(
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onBackground else Color(0xFF44474A)
+        val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
+        Box(
             modifier = Modifier
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-            ),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                .fillMaxWidth()
+                .neumorphic(cornerRadius = 20.dp, elevation = 4.dp) // Standard radius
         ) {
             Row(
                 modifier = Modifier
@@ -655,17 +672,27 @@ fun AlbumDetailScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-            AlbumArt(
-                track = sampleTrack,
-                size = 100.dp
-            )
+            // Recessed picture frame album art (24.dp corner radius per specs)
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .neumorphic(cornerRadius = 24.dp, elevation = 3.dp, isPressed = true)
+                    .padding(3.dp)
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                AlbumArt(
+                    track = sampleTrack,
+                    size = 100.dp,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = albumName,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = primaryTextColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -673,7 +700,8 @@ fun AlbumDetailScreen(
                 Text(
                     text = sampleTrack?.artist ?: "Unknown Artist",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium,
+                    color = secondaryTextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -681,7 +709,7 @@ fun AlbumDetailScreen(
                 Text(
                     text = "${albumTracks.size} High-Fidelity Tracks",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = secondaryTextColor.copy(alpha = 0.8f)
                 )
             }
         }
@@ -693,13 +721,13 @@ fun AlbumDetailScreen(
             text = "Tracks",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            color = secondaryTextColor,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
         LazyColumn(
             contentPadding = PaddingValues(bottom = 120.dp, top = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp), // Spacing is 12px/12.dp per spec
             modifier = Modifier.fillMaxWidth()
         ) {
             items(albumTracks, key = { it.id }) { track ->
@@ -717,20 +745,16 @@ fun AlbumDetailTrackRow(
     track: Track,
     onClick: () -> Unit
 ) {
-    Card(
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF44474A)
+    val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .neumorphic(cornerRadius = 12.dp, elevation = 3.dp) // Playlist song item radius 12.dp per spec
             .clickable(onClick = onClick)
-            .testTag("album_detail_track_${track.id}"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .testTag("album_detail_track_${track.id}")
     ) {
         Row(
             modifier = Modifier
@@ -751,8 +775,8 @@ fun AlbumDetailTrackRow(
                 Text(
                     text = track.title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryTextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -761,7 +785,8 @@ fun AlbumDetailTrackRow(
                     Text(
                         text = track.artist,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium,
+                        color = secondaryTextColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -791,7 +816,7 @@ fun AlbumDetailTrackRow(
             Text(
                 text = formatMs(track.durationMs),
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = secondaryTextColor
             )
         }
     }
@@ -808,7 +833,7 @@ fun ArtistGridScreen(
 
     LazyColumn(
         contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp), // spacedBy 12px/12.dp per spec
         modifier = Modifier.fillMaxSize()
     ) {
         items(artists.keys.toList(), key = { it }) { artistName ->
@@ -828,10 +853,14 @@ fun ArtistListItem(
     artistTracks: List<Track>,
     onClick: () -> Unit
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF44474A)
+    val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphic(cornerRadius = 12.dp, elevation = 3.dp)
+            .neumorphic(cornerRadius = 12.dp, elevation = 3.dp) // List item 12.dp radius
             .clickable(onClick = onClick)
             .testTag("artist_list_item_$artistName")
     ) {
@@ -863,7 +892,7 @@ fun ArtistListItem(
                     text = artistName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = primaryTextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -872,14 +901,15 @@ fun ArtistListItem(
                 Text(
                     text = "$uniqueAlbumsCount ${if (uniqueAlbumsCount == 1) "Album" else "Albums"} • ${artistTracks.size} ${if (artistTracks.size == 1) "Track" else "Tracks"}",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    fontWeight = FontWeight.Medium,
+                    color = secondaryTextColor
                 )
             }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "View Albums",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = secondaryTextColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -944,29 +974,25 @@ fun ArtistAlbumsScreen(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onBackground else Color(0xFF44474A)
+        val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
         LazyColumn(
             contentPadding = PaddingValues(bottom = 120.dp, top = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp), // spacing 12px/12.dp per spec
             modifier = Modifier.fillMaxWidth()
         ) {
             items(albumsOfArtist.keys.toList(), key = { it }) { albumTitle ->
                 val albumTracks = albumsOfArtist[albumTitle] ?: emptyList()
                 val sampleTrack = albumTracks.firstOrNull()
 
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .neumorphic(cornerRadius = 12.dp, elevation = 4.dp) // List items 12.dp radius
                         .clickable { onAlbumSelect(albumTitle) }
-                        .testTag("artist_album_item_$albumTitle"),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        .testTag("artist_album_item_$albumTitle")
                 ) {
                     Row(
                         modifier = Modifier
@@ -974,17 +1000,27 @@ fun ArtistAlbumsScreen(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AlbumArt(
-                            track = sampleTrack,
-                            size = 64.dp
-                        )
+                        // Recessed picture frame album art
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .neumorphic(cornerRadius = 16.dp, elevation = 2.dp, isPressed = true)
+                                .padding(2.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        ) {
+                            AlbumArt(
+                                track = sampleTrack,
+                                size = 64.dp,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = albumTitle,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = primaryTextColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -992,13 +1028,14 @@ fun ArtistAlbumsScreen(
                             Text(
                                 text = "${albumTracks.size} ${if (albumTracks.size == 1) "Track" else "Tracks"}",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                fontWeight = FontWeight.Medium,
+                                color = secondaryTextColor
                             )
                         }
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "View Tracks",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = secondaryTextColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1013,6 +1050,10 @@ fun EmptyLibraryState(
     hasQuery: Boolean,
     onRegenDemo: () -> Unit
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val primaryTextColor = if (isDark) MaterialTheme.colorScheme.onBackground else Color(0xFF44474A)
+    val secondaryTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF7E858D)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1020,38 +1061,50 @@ fun EmptyLibraryState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Outlined.LibraryMusic,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            modifier = Modifier.size(72.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .neumorphic(cornerRadius = 48.dp, elevation = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.LibraryMusic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = if (hasQuery) "No matching tracks found" else "Your library is empty",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = primaryTextColor
         )
         Text(
             text = if (hasQuery) "Try adjusting your search criteria" else "Scan your active Android storage structure or load high-resolution synthesized tracks below.",
             fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            color = secondaryTextColor,
             modifier = Modifier.padding(vertical = 8.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         if (!hasQuery) {
-            Button(
-                onClick = onRegenDemo,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.testTag("load_demo_library_button")
+            Box(
+                modifier = Modifier
+                    .neumorphic(cornerRadius = 20.dp, elevation = 4.dp)
+                    .clickable(onClick = onRegenDemo)
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .testTag("load_demo_library_button"),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Generate Demo High-Res Music", fontSize = 13.sp)
+                Text(
+                    text = "Generate Demo High-Res Music",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

@@ -19,15 +19,15 @@ object AudioSynthesizer {
             directory.mkdirs()
         }
 
-        // 1. Cozy Lofi Ambient (48kHz, 24-bit, High-Res, Stereo)
-        val track1 = File(directory, "lofi_ambient.wav")
+        // 1. Cozy Lofi Ambient (Optimized to 44.1kHz, 16-bit, 3s loop to prevent start delay)
+        val track1 = File(directory, "lofi_ambient_v2.wav")
         if (!track1.exists()) {
             synthesizeWav(
                 file = track1,
-                sampleRate = 48000,
+                sampleRate = 44100,
                 isStereo = true,
-                bitDepth = 24,
-                durationSeconds = 12,
+                bitDepth = 16,
+                durationSeconds = 3,
                 synthType = SynthType.LOFI_AMBIENT
             )
         }
@@ -39,25 +39,25 @@ object AudioSynthesizer {
                 album = "Cosmic Dust",
                 path = track1.absolutePath,
                 uri = Uri.fromFile(track1),
-                durationMs = 12000L,
+                durationMs = 3000L,
                 size = track1.length(),
                 genre = "Ambient",
                 isDemo = true,
-                sampleRateKhz = 48.0f,
-                bitDepth = 24,
+                sampleRateKhz = 44.1f,
+                bitDepth = 16,
                 format = "WAV"
             )
         )
 
-        // 2. Midnight Arpeggio (96kHz, 24-bit, Ultra High-Res, Stereo)
-        val track2 = File(directory, "midnight_arp.wav")
+        // 2. Midnight Arpeggio (Optimized to 44.1kHz, 16-bit, 3s loop)
+        val track2 = File(directory, "midnight_arp_v2.wav")
         if (!track2.exists()) {
             synthesizeWav(
                 file = track2,
-                sampleRate = 96000,
+                sampleRate = 44100,
                 isStereo = true,
-                bitDepth = 24,
-                durationSeconds = 10,
+                bitDepth = 16,
+                durationSeconds = 3,
                 synthType = SynthType.MID_ARP
             )
         }
@@ -69,25 +69,25 @@ object AudioSynthesizer {
                 album = "Neon Skies",
                 path = track2.absolutePath,
                 uri = Uri.fromFile(track2),
-                durationMs = 10000L,
+                durationMs = 3000L,
                 size = track2.length(),
                 genre = "Electronic",
                 isDemo = true,
-                sampleRateKhz = 96.0f,
-                bitDepth = 24,
+                sampleRateKhz = 44.1f,
+                bitDepth = 16,
                 format = "WAV"
             )
         )
 
-        // 3. Deep Pulse Sub (44.1kHz, 16-bit, Mono)
-        val track3 = File(directory, "deep_pulse.wav")
+        // 3. Deep Pulse Sub (Optimized to 44.1kHz, 16-bit, 3s loop)
+        val track3 = File(directory, "deep_pulse_v2.wav")
         if (!track3.exists()) {
             synthesizeWav(
                 file = track3,
                 sampleRate = 44100,
                 isStereo = false,
                 bitDepth = 16,
-                durationSeconds = 15,
+                durationSeconds = 3,
                 synthType = SynthType.DEEP_PULSE
             )
         }
@@ -99,7 +99,7 @@ object AudioSynthesizer {
                 album = "Tectonic Resonance",
                 path = track3.absolutePath,
                 uri = Uri.fromFile(track3),
-                durationMs = 15000L,
+                durationMs = 3000L,
                 size = track3.length(),
                 genre = "Minimal Synth",
                 isDemo = true,
@@ -109,15 +109,15 @@ object AudioSynthesizer {
             )
         )
 
-        // 4. Retro Chiptune Loop (48kHz, 16-bit, Stereo)
-        val track4 = File(directory, "retro_chiptune.wav")
+        // 4. Retro Chiptune Loop (Optimized to 44.1kHz, 16-bit, 3s loop)
+        val track4 = File(directory, "retro_chiptune_v2.wav")
         if (!track4.exists()) {
             synthesizeWav(
                 file = track4,
-                sampleRate = 48000,
+                sampleRate = 44100,
                 isStereo = true,
                 bitDepth = 16,
-                durationSeconds = 8,
+                durationSeconds = 3,
                 synthType = SynthType.RETRO_CHIP
             )
         }
@@ -129,11 +129,11 @@ object AudioSynthesizer {
                 album = "Level Select",
                 path = track4.absolutePath,
                 uri = Uri.fromFile(track4),
-                durationMs = 8000L,
+                durationMs = 3000L,
                 size = track4.length(),
                 genre = "Chiptune",
                 isDemo = true,
-                sampleRateKhz = 48.0f,
+                sampleRateKhz = 44.1f,
                 bitDepth = 16,
                 format = "WAV"
             )

@@ -88,7 +88,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
 
     // Themes & Custom Accent colors
-    private val _accentColor = MutableStateFlow(ColorPresets.RoyalAmethyst)
+    private val _accentColor = MutableStateFlow(
+        Color(
+            value = getApplication<Application>()
+                .getSharedPreferences("music_player_settings", android.content.Context.MODE_PRIVATE)
+                .getLong("accent_color_value", ColorPresets.RoyalAmethyst.value.toLong()).toULong()
+        )
+    )
     val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
 
     private val _themeMode = MutableStateFlow(ThemeMode.LIGHT) // default beautiful light mode
@@ -121,6 +127,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         extractMajorColor(track)
                     }
                     _accentColor.value = color
+                    getApplication<Application>()
+                        .getSharedPreferences("music_player_settings", android.content.Context.MODE_PRIVATE)
+                        .edit()
+                        .putLong("accent_color_value", color.value.toLong())
+                        .apply()
                 }
             }
         }
@@ -131,16 +142,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
         try {
             val context = getApplication<Application>()
-            val attributedContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                try {
-                    context.createAttributionContext("attribution")
-                } catch (t: Throwable) {
-                    context
-                }
-            } else {
-                context
-            }
-            player = ExoPlayer.Builder(attributedContext).build().apply {
+            player = ExoPlayer.Builder(context).build().apply {
                 // Media3 handles gapless audio transition perfectly by default in its playlist engine!
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
@@ -331,22 +333,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
         var bitmap: Bitmap? = null
         val context = getApplication<Application>()
-        val attributedContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            try {
-                context.createAttributionContext("attribution")
-            } catch (t: Throwable) {
-                context
-            }
-        } else {
-            context
-        }
 
         try {
             // Strategy 1: Load from albumArtUri if present
             val artUri = track.albumArtUri
             if (artUri != null && artUri != android.net.Uri.EMPTY) {
                 try {
-                    attributedContext.contentResolver.openInputStream(artUri)?.use { stream ->
+                    context.contentResolver.openInputStream(artUri)?.use { stream ->
                         val options = BitmapFactory.Options().apply {
                             inSampleSize = 4 // Safe downsampling
                         }
@@ -360,7 +353,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             // Strategy 2: Use loadThumbnail on Q+ (if Strategy 1 failed or wasn't available)
             if (bitmap == null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 try {
-                    bitmap = attributedContext.contentResolver.loadThumbnail(track.uri, android.util.Size(120, 120), null)
+                    bitmap = context.contentResolver.loadThumbnail(track.uri, android.util.Size(120, 120), null)
                 } catch (t: Throwable) {
                     // Ignore
                 }
@@ -514,6 +507,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     // Cosmetics
     fun setAccentColor(color: Color) {
         _accentColor.value = color
+        getApplication<Application>()
+            .getSharedPreferences("music_player_settings", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putLong("accent_color_value", color.value.toLong())
+            .apply()
     }
 
     fun setThemeMode(mode: ThemeMode) {

@@ -12,15 +12,6 @@ object MediaScanner {
     private const val TAG = "MediaScanner"
 
     fun scanLocalMedia(context: Context): List<Track> {
-        val attributedContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                context.createAttributionContext("attribution")
-            } catch (t: Throwable) {
-                context
-            }
-        } else {
-            context
-        }
         val tracks = mutableListOf<Track>()
 
         // Check permission before querying
@@ -30,7 +21,7 @@ object MediaScanner {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
 
-        val hasPermission = attributedContext.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val hasPermission = context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (!hasPermission) {
             Log.w(TAG, "Read audio storage permission is not granted. Cannot scan MediaStore.")
             return emptyList()
@@ -53,7 +44,7 @@ object MediaScanner {
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
         try {
-            attributedContext.contentResolver.query(uri, projection, selection, null, sortOrder)?.use { cursor ->
+            context.contentResolver.query(uri, projection, selection, null, sortOrder)?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                 val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
